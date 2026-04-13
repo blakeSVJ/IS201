@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Runner Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: linear-gradient(to bottom, #87ceeb 0%, #dff6ff 45%, #8fd694 45%, #5b8c42 100%);
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #game {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #hud {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 20;
+      color: white;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+      font-size: 22px;
+      font-weight: bold;
+      line-height: 1.5;
+    }
+
+    #message {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 30;
+      background: rgba(0,0,0,0.45);
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #messageBox {
+      background: rgba(0,0,0,0.75);
+      padding: 30px;
+      border-radius: 18px;
+      max-width: 520px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    #messageBox h1 {
+      margin-bottom: 14px;
+      font-size: 38px;
+    }
+
+    #messageBox p {
+      font-size: 20px;
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+
+    #road {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 420px;
+      height: 100%;
+      background: linear-gradient(to bottom, #666, #444);
+      border-left: 8px solid #ddd;
+      border-right: 8px solid #ddd;
+      overflow: hidden;
+    }
+
+    .lane-line {
+      position: absolute;
+      top: 0;
+      width: 6px;
+      height: 100%;
+      background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0 20px,
+        rgba(255,255,255,0.9) 20px 50px
+      );
+      animation: moveRoad 0.35s linear infinite;
+    }
+
+    .lane1 {
+      left: 33.33%;
+      transform: translateX(-50%);
+    }
+
+    .lane2 {
+      left: 66.66%;
+      transform: translateX(-50%);
+    }
+
+    @keyframes moveRoad {
+      from { background-position-y: 0; }
+      to { background-position-y: 70px; }
+    }
+
+    #player {
+      position: absolute;
+      width: 62px;
+      height: 90px;
+      bottom: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      transition: left 0.12s ease;
+    }
+
+    .runner-body {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .head {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      background: #ffd39b;
+      border-radius: 50%;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 0;
+    }
+
+    .torso {
+      position: absolute;
+      width: 26px;
+      height: 34px;
+      background: #ff4d4d;
+      border-radius: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 24px;
+    }
+
+    .arm {
+      position: absolute;
+      width: 10px;
+      height: 28px;
+      background: #ffd39b;
+      top: 28px;
+      border-radius: 8px;
+      transform-origin: top center;
+      animation: swing 0.3s infinite alternate;
+    }
+
+    .arm.left { left: 10px; }
+    .arm.right { right: 10px; animation-delay: 0.15s; }
+
+    .leg {
+      position: absolute;
+      width: 10px;
+      height: 32px;
+      background: #1f3c88;
+      top: 54px;
+      border-radius: 8px;
+      transform-origin: top center;
+      animation: swing 0.3s infinite alternate;
+    }
+
+    .leg.left { left: 18px; }
+    .leg.right { right: 18px; animation-delay: 0.15s; }
+
+    @keyframes swing {
+      from { transform: rotate(-20deg); }
+      to { transform: rotate(20deg); }
+    }
+
+    .jumping {
+      animation: jumpAnim 0.7s ease;
+    }
+
+    @keyframes jumpAnim {
+      0%   { bottom: 70px; }
+      50%  { bottom: 200px; }
+      100% { bottom: 70px; }
+    }
+
+    .sliding {
+      height: 52px !important;
+      width: 80px !important;
+      bottom: 70px !important;
+    }
+
+    .obstacle {
+      position: absolute;
+      width: 70px;
+      border-radius: 12px;
+      left: 0;
+      z-index: 8;
+    }
+
+    .barrier {
+      height: 72px;
+      background: linear-gradient(to bottom, #ffb347, #ff7b00);
+      border: 4px solid #8a4f00;
+      box-shadow: inset 0 0 10px rgba(255,255,255,0.25);
+    }
+
+    .duck {
+      height: 30px;
+      background: linear-gradient(to bottom, #b22222, #7f0000);
+      border: 4px solid #330000;
+    }
+
+    .coin {
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      background: radial-gradient(circle at 30% 30%, #fff8a6, #ffd700 60%, #c99a00 100%);
+      border-radius: 50%;
+      border: 3px solid #b8860b;
+      z-index: 7;
+      animation: coinSpin 0.5s linear infinite alternate;
+    }
+
+    @keyframes coinSpin {
+      from { transform: scaleX(1); }
+      to { transform: scaleX(0.55); }
+    }
+
+    #groundGlow {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 460px;
+      height: 120px;
+      background: radial-gradient(circle, rgba(255,255,255,0.12), transparent 70%);
+      pointer-events: none;
+    }
+
+    #controls {
+      position: absolute;
+      bottom: 14px;
+      right: 16px;
+      z-index: 20;
+      color: white;
+      text-shadow: 1px 1px 3px black;
+      font-size: 16px;
+      text-align: right;
+      line-height: 1.4;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div id="hud">
+      <div>Time: <span id="time">0.0</span>s / 100s</div>
+      <div>Coins: <span id="coins">0</span></div>
+      <div>Speed: <span id="speed">1.0</span>x</div>
+    </div>
+
+    <div id="message">
+      <div id="messageBox">
+        <h1>Runner Rush</h1>
+        <p>Move: ← → or A / D</p>
+        <p>Jump: ↑ or W or Space</p>
+        <p>Slide: ↓ or S</p>
+        <p>Survive for 100 seconds to win.</p>
+        <p>Press <strong>Enter</strong> to start.</p>
+      </div>
+    </div>
+
+    <div id="road">
+      <div class="lane-line lane1"></div>
+      <div class="lane-line lane2"></div>
+
+      <div id="player">
+        <div class="runner-body">
+          <div class="head"></div>
+          <div class="torso"></div>
+          <div class="arm left"></div>
+          <div class="arm right"></div>
+          <div class="leg left"></div>
+          <div class="leg right"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="groundGlow"></div>
+
+    <div id="controls">
+      Survive 100 seconds<br>
+      Enter = restart
+    </div>
+  </div>
+
+  <script>
+    const road = document.getElementById("road");
+    const player = document.getElementById("player");
+    const message = document.getElementById("message");
+    const messageBox = document.getElementById("messageBox");
+    const timeDisplay = document.getElementById("time");
+    const coinDisplay = document.getElementById("coins");
+    const speedDisplay = document.getElementById("speed");
+
+    const lanes = [70, 210, 350];
+    let laneIndex = 1;
+
+    let gameRunning = false;
+    let gameOver = false;
+    let won = false;
+
+    let isJumping = false;
+    let isSliding = false;
+
+    let obstacles = [];
+    let coins = [];
+
+    let scoreCoins = 0;
+    let startTime = 0;
+    let lastFrame = 0;
+    let spawnTimer = 0;
+    let coinTimer = 0;
+
+    let obstacleSpeed = 420;
+    const survivalGoal = 100;
+
+    function setPlayerLane() {
+      player.style.left = lanes[laneIndex] + "px";
+    }
+
+    setPlayerLane();
+
+    function resetGame() {
+      obstacles.forEach(obj => obj.el.remove());
+      coins.forEach(obj => obj.el.remove());
+      obstacles = [];
+      coins = [];
+
+      laneIndex = 1;
+      setPlayerLane();
+
+      gameRunning = false;
+      gameOver = false;
+      won = false;
+
+      isJumping = false;
+      isSliding = false;
+      player.classList.remove("jumping", "sliding");
+
+      scoreCoins = 0;
+      startTime = 0;
+      lastFrame = 0;
+      spawnTimer = 0;
+      coinTimer = 0;
+      obstacleSpeed = 420;
+
+      timeDisplay.textContent = "0.0";
+      coinDisplay.textContent = "0";
+      speedDisplay.textContent = "1.0";
+
+      message.classList.remove("hidden");
+      messageBox.innerHTML = `
+        <h1>Runner Rush</h1>
+        <p>Move: ← → or A / D</p>
+        <p>Jump: ↑ or W or Space</p>
+        <p>Slide: ↓ or S</p>
+        <p>Survive for 100 seconds to win.</p>
+        <p>Press <strong>Enter</strong> to start.</p>
+      `;
+    }
+
+    function startGame() {
+      obstacles.forEach(obj => obj.el.remove());
+      coins.forEach(obj => obj.el.remove());
+      obstacles = [];
+      coins = [];
+
+      gameRunning = true;
+      gameOver = false;
+      won = false;
+      scoreCoins = 0;
+      startTime = performance.now();
+      lastFrame = performance.now();
+      spawnTimer = 0;
+      coinTimer = 0;
+      obstacleSpeed = 420;
+      coinDisplay.textContent = "0";
+      message.classList.add("hidden");
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function endGame(win) {
+      gameRunning = false;
+      gameOver = !win;
+      won = win;
+
+      message.classList.remove("hidden");
+
+      if (win) {
+        messageBox.innerHTML = `
+          <h1>You Win!</h1>
+          <p>You survived all 100 seconds.</p>
+          <p>Coins collected: <strong>${scoreCoins}</strong></p>
+          <p>Press <strong>Enter</strong> to play again.</p>
+        `;
+      } else {
+        const survived = ((performance.now() - startTime) / 1000).toFixed(1);
+        messageBox.innerHTML = `
+          <h1>Game Over</h1>
+          <p>You crashed after <strong>${survived}</strong> seconds.</p>
+          <p>Coins collected: <strong>${scoreCoins}</strong></p>
+          <p>Press <strong>Enter</strong> to try again.</p>
+        `;
+      }
+    }
+
+    function moveLeft() {
+      if (!gameRunning) return;
+      if (laneIndex > 0) {
+        laneIndex--;
+        setPlayerLane();
+      }
+    }
+
+    function moveRight() {
+      if (!gameRunning) return;
+      if (laneIndex < 2) {
+        laneIndex++;
+        setPlayerLane();
+      }
+    }
+
+    function jump() {
+      if (!gameRunning || isJumping || isSliding) return;
+      isJumping = true;
+      player.classList.add("jumping");
+      setTimeout(() => {
+        player.classList.remove("jumping");
+        isJumping = false;
+      }, 700);
+    }
+
+    function slide() {
+      if (!gameRunning || isSliding || isJumping) return;
+      isSliding = true;
+      player.classList.add("sliding");
+      setTimeout(() => {
+        player.classList.remove("sliding");
+        isSliding = false;
+      }, 700);
+    }
+
+    function spawnObstacle() {
+      const type = Math.random() < 0.7 ? "barrier" : "duck";
+      const lane = Math.floor(Math.random() * 3);
+
+      const el = document.createElement("div");
+      el.classList.add("obstacle", type);
+      el.style.left = (lanes[lane] - 35) + "px";
+      el.style.top = "-100px";
+
+      road.appendChild(el);
+
+      obstacles.push({
+        el,
+        lane,
+        y: -100,
+        type,
+        width: 70,
+        height: type === "barrier" ? 72 : 30
+      });
+    }
+
+    function spawnCoin() {
+      const lane = Math.floor(Math.random() * 3);
+
+      const el = document.createElement("div");
+      el.classList.add("coin");
+      el.style.left = (lanes[lane] - 17) + "px";
+      el.style.top = "-50px";
+
+      road.appendChild(el);
+
+      coins.push({
+        el,
+        lane,
+        y: -50,
+        width: 34,
+        height: 34
+      });
+    }
+
+    function collides(a, b) {
+      return (
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.y + a.height > b.y
+      );
+    }
+
+    function getPlayerHitbox() {
+      const roadHeight = road.clientHeight;
+
+      const width = isSliding ? 80 : 62;
+      const height = isSliding ? 52 : 90;
+
+      const bottomPos = isJumping ? 200 : 70;
+      const x = lanes[laneIndex] - width / 2;
+      const y = roadHeight - bottomPos - height;
+
+      return { x, y, width, height };
+    }
+
+    function updateObjects(delta) {
+      const playerBox = getPlayerHitbox();
+
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obj = obstacles[i];
+        obj.y += obstacleSpeed * delta;
+        obj.el.style.top = obj.y + "px";
+
+        const obstacleBox = {
+          x: lanes[obj.lane] - obj.width / 2,
+          y: obj.y,
+          width: obj.width,
+          height: obj.height
+        };
+
+        if (obj.lane === laneIndex && collides(playerBox, obstacleBox)) {
+          if (obj.type === "barrier" && isJumping) {
+            // jumped over it
+          } else if (obj.type === "duck" && isSliding) {
+            // slid under it
+          } else {
+            endGame(false);
+            return;
+          }
+        }
+
+        if (obj.y > road.clientHeight + 100) {
+          obj.el.remove();
+          obstacles.splice(i, 1);
+        }
+      }
+
+      for (let i = coins.length - 1; i >= 0; i--) {
+        const coin = coins[i];
+        coin.y += obstacleSpeed * delta;
+        coin.el.style.top = coin.y + "px";
+
+        const coinBox = {
+          x: lanes[coin.lane] - coin.width / 2,
+          y: coin.y,
+          width: coin.width,
+          height: coin.height
+        };
+
+        if (coin.lane === laneIndex && collides(playerBox, coinBox)) {
+          scoreCoins++;
+          coinDisplay.textContent = scoreCoins;
+          coin.el.remove();
+          coins.splice(i, 1);
+          continue;
+        }
+
+        if (coin.y > road.clientHeight + 60) {
+          coin.el.remove();
+          coins.splice(i, 1);
+        }
+      }
+    }
+
+    function gameLoop(timestamp) {
+      if (!gameRunning) return;
+
+      const delta = Math.min((timestamp - lastFrame) / 1000, 0.033);
+      lastFrame = timestamp;
+
+      const elapsed = (timestamp - startTime) / 1000;
+      timeDisplay.textContent = elapsed.toFixed(1);
+
+      if (elapsed >= survivalGoal) {
+        endGame(true);
+        return;
+      }
+
+      obstacleSpeed = 420 + elapsed * 3.2;
+      speedDisplay.textContent = (obstacleSpeed / 420).toFixed(1);
+
+      spawnTimer += delta;
+      coinTimer += delta;
+
+      const spawnRate = Math.max(0.48, 1.05 - elapsed * 0.0045);
+      const coinRate = 0.9;
+
+      if (spawnTimer >= spawnRate) {
+        spawnObstacle();
+        spawnTimer = 0;
+      }
+
+      if (coinTimer >= coinRate) {
+        if (Math.random() < 0.72) spawnCoin();
+        coinTimer = 0;
+      }
+
+      updateObjects(delta);
+
+      if (gameRunning) {
+        requestAnimationFrame(gameLoop);
+      }
+    }
+
+    document.addEventListener("keydown", (e) => {
+      const key = e.key.toLowerCase();
+
+      if (e.key === "Enter") {
+        if (!gameRunning) startGame();
+        return;
+      }
+
+      if (!gameRunning) return;
+
+      if (e.key === "ArrowLeft" || key === "a") moveLeft();
+      if (e.key === "ArrowRight" || key === "d") moveRight();
+      if (e.key === "ArrowUp" || key === "w" || e.key === " ") jump();
+      if (e.key === "ArrowDown" || key === "s") slide();
+    });
+
+    resetGame();
+  </script>
+</body>
+</html>
